@@ -6,7 +6,7 @@ function setup() {
 }
 
 function draw() {
-  background(90, 200, 190);
+  background(88, 178, 220);
 
   for (let i = ripples.length - 1; i >= 0; i--) {
     updateRipple(ripples[i]);
