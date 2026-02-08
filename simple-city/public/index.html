@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+    />
+    <title>Simple City</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <button id="requestOrientationButton" onclick="requestOrientation()">
+      request orientation
+    </button>
+
+    <div id="p5-canvas-container"></div>
+
+    <form id="chatForm">
+      <input
+        id="newMessage"
+        type="text"
+        placeholder="Say something..."
+        autocomplete="off"
+      />
+      <button type="submit">Send</button>
+    </form>
+
+    <script src="lib/p5.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      function requestOrientation() {
+        if (typeof DeviceOrientationEvent.requestPermission === "function") {
+          DeviceOrientationEvent.requestPermission()
+            .then(function (permissionState) {
+              if (permissionState === "granted") {
+                window.addEventListener(
+                  "deviceorientation",
+                  handleOrientation,
+                  true,
+                );
+              }
+            })
+            .catch(console.error);
+        } else {
+          window.addEventListener("deviceorientation", handleOrientation, true);
+        }
+      }
+    </script>
+    <script src="sketch.js"></script>
+    <script src="chat.js"></script>
+  </body>
+</html>
