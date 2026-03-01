@@ -1,0 +1,51 @@
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: #0a0a2e;
+  color: white;
+  font-family: monospace;
+}
+
+.header {
+  text-align: center;
+  padding: 20px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+#player-count {
+  font-size: 1.2rem;
+  color: #aaa;
+}
+
+.main-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10px;
+  gap: 15px;
+}
+
+.player-card {
+  background-color: rgb(50, 50, 50);
+  border-radius: 10px;
+  padding: 15px;
+  width: 150px;
+  transition: background-color 0.1s;
+}
+
+.player-label {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.player-card p {
+  margin: 4px 0;
+  font-size: 0.85rem;
+}
