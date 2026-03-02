@@ -43,6 +43,8 @@ io.on("connection", (socket) => {
         x: data.x,
         y: data.y,
         z: data.z,
+        beta: data.beta,
+        gamma: data.gamma,
       });
     }
   });

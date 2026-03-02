@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  overflow-x: hidden;
+  overflow: hidden;
   background-color: #0a0a2e;
   color: white;
   font-family: monospace;
@@ -8,44 +8,128 @@ body {
 
 .header {
   text-align: center;
-  padding: 20px;
+  padding: 10px;
+  position: relative;
+  z-index: 10;
 }
 
 .header h1 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 #player-count {
-  font-size: 1.2rem;
+  font-size: 1rem;
   color: #aaa;
+  margin: 4px 0;
 }
 
-.main-wrapper {
+.stage {
+  position: relative;
+  width: 100%;
+  height: calc(100dvh - 180px);
+}
+
+.avatar {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 5;
+}
+
+.avatar-body {
+  font-size: 2.5rem;
+  display: block;
+  position: relative;
+  z-index: 2;
+}
+
+.avatar-name {
+  display: block;
+  font-size: 0.7rem;
+  color: #ccc;
+  margin-top: 2px;
+  position: relative;
+  z-index: 2;
+}
+
+.hand-indicator {
+  position: absolute;
+  font-size: 2rem;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  transition:
+    left 0.08s,
+    top 0.08s;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+}
+
+.fist-circle {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: rgb(50, 50, 50);
+  opacity: 0.3;
+  left: 50%;
+  top: 50%;
+  transition:
+    width 0.12s,
+    height 0.12s,
+    background-color 0.1s,
+    opacity 0.12s,
+    left 0.08s,
+    top 0.08s;
+  z-index: 3;
+}
+
+.punch-burst {
+  position: absolute;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  opacity: 0.8;
+  pointer-events: none;
+  z-index: 1;
+  transition:
+    transform 0.4s ease-out,
+    opacity 0.4s ease-out;
+}
+
+.debug-strip {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 10px;
-  gap: 15px;
+  overflow-x: auto;
+  align-items: center;
+  padding: 0 10px;
+  gap: 10px;
+  z-index: 20;
 }
 
 .player-card {
   background-color: rgb(50, 50, 50);
-  border-radius: 10px;
-  padding: 15px;
-  width: 150px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 120px;
+  flex-shrink: 0;
   transition: background-color 0.1s;
 }
 
 .player-label {
-  font-size: 1rem;
+  font-size: 0.8rem;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   color: #fff;
 }
 
 .player-card p {
-  margin: 4px 0;
-  font-size: 0.85rem;
+  margin: 2px 0;
+  font-size: 0.7rem;
 }
