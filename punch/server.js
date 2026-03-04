@@ -20,71 +20,107 @@ const io = new Server(HTTPSserver);
 let players = [];
 let conductor;
 
-let HIT_RADIUS = 0.12;
+let ANIMAL_EMOJIS = [
+  "🐶", "🐱", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸",
+  "🐵", "🐔", "🐧", "🦊", "🦝", "🦄", "🐴", "🐺", "🐰", "🐙"
+];
+let takenEmojis = {};
+
+let HIT_RADIUS = 0.08;
 let BALL_FRICTION = 0.995;
 let BALL_BOUNCE_DAMPING = 0.8;
 let HIT_FORCE_MULTIPLIER = 3;
-let BALL_BASE_SPEED = 0.008;
+let BALL_BASE_SPEED = 0.08;
 let TICK_RATE = 33;
 
-let ball = {
-  x: 0.5,
-  y: 0.5,
-  vx: (Math.random() - 0.5) * BALL_BASE_SPEED,
-  vy: (Math.random() - 0.5) * BALL_BASE_SPEED,
-};
+let balls = [];
+let nextBallId = 0;
+
+function spawnBallNearPlayer(player) {
+  let angle = Math.random() * Math.PI * 2;
+  let dist = 0.02 + Math.random() * (HIT_RADIUS - 0.02);
+  let bx = Math.max(0, Math.min(1, player.x + Math.cos(angle) * dist));
+  let by = Math.max(0, Math.min(1, player.y + Math.sin(angle) * dist));
+  let ball = { id: nextBallId++, x: bx, y: by, vx: 0, vy: 0 };
+  balls.push(ball);
+  if (conductor) {
+    io.to(conductor).emit("new-ball", ball);
+  }
+}
 
 setInterval(function () {
-  ball.x += ball.vx;
-  ball.y += ball.vy;
-  ball.vx *= BALL_FRICTION;
-  ball.vy *= BALL_FRICTION;
+  for (let i = balls.length - 1; i >= 0; i--) {
+    let ball = balls[i];
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+    ball.vx *= BALL_FRICTION;
+    ball.vy *= BALL_FRICTION;
 
-  if (ball.x <= 0) {
-    ball.x = 0;
-    ball.vx = Math.abs(ball.vx) * BALL_BOUNCE_DAMPING;
-  }
-  if (ball.x >= 1) {
-    ball.x = 1;
-    ball.vx = -Math.abs(ball.vx) * BALL_BOUNCE_DAMPING;
-  }
-  if (ball.y <= 0) {
-    ball.y = 0;
-    ball.vy = Math.abs(ball.vy) * BALL_BOUNCE_DAMPING;
-  }
-  if (ball.y >= 1) {
-    ball.y = 1;
-    ball.vy = -Math.abs(ball.vy) * BALL_BOUNCE_DAMPING;
+    if (ball.x <= 0) {
+      ball.x = 0;
+      ball.vx = Math.abs(ball.vx) * BALL_BOUNCE_DAMPING;
+    }
+    if (ball.x >= 1) {
+      ball.x = 1;
+      ball.vx = -Math.abs(ball.vx) * BALL_BOUNCE_DAMPING;
+    }
+    if (ball.y <= 0) {
+      ball.y = 0;
+      ball.vy = Math.abs(ball.vy) * BALL_BOUNCE_DAMPING;
+    }
+    if (ball.y >= 1) {
+      ball.y = 1;
+      ball.vy = -Math.abs(ball.vy) * BALL_BOUNCE_DAMPING;
+    }
   }
 
   if (conductor) {
-    io.to(conductor).emit("ball-update", {
-      x: ball.x,
-      y: ball.y,
-      vx: ball.vx,
-      vy: ball.vy,
-    });
+    io.to(conductor).emit("balls-update", balls);
   }
 }, TICK_RATE);
+
+function getAvailableEmojis() {
+  return ANIMAL_EMOJIS.filter(function (e) {
+    return !takenEmojis[e];
+  });
+}
 
 io.on("connection", (socket) => {
   console.log("a user connected", socket.id);
 
+  socket.emit("available-emojis", getAvailableEmojis());
+
   socket.on("my-role", function (data) {
     if (data.role === "player") {
+      let emoji = data.emoji;
+      if (!emoji || takenEmojis[emoji]) {
+        socket.emit("emoji-rejected");
+        return;
+      }
+      takenEmojis[emoji] = socket.id;
       let player = {
         id: socket.id,
         x: 0.1 + Math.random() * 0.8,
         y: 0.1 + Math.random() * 0.8,
+        emoji: emoji,
       };
       players.push(player);
       console.log(players);
+      socket.broadcast.emit("emoji-taken", emoji);
       if (conductor) {
         io.to(conductor).emit("new-player", player);
       }
+      spawnBallNearPlayer(player);
     } else if (data.role === "conductor") {
       conductor = socket.id;
-      socket.emit("game-state", { players: players, ball: ball });
+      socket.emit("game-state", { players: players, balls: balls });
+    }
+  });
+
+  socket.on("reset-balls", function () {
+    balls = [];
+    for (let p of players) {
+      spawnBallNearPlayer(p);
     }
   });
 
@@ -92,24 +128,27 @@ io.on("connection", (socket) => {
     let player = players.find((p) => p.id === socket.id);
     if (!player) return;
 
-    let dx = ball.x - player.x;
-    let dy = ball.y - player.y;
-    let dist = Math.sqrt(dx * dx + dy * dy);
+    let hitAny = false;
 
-    let hit = dist < HIT_RADIUS;
+    for (let ball of balls) {
+      let dx = ball.x - player.x;
+      let dy = ball.y - player.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (hit && dist > 0) {
-      let nx = dx / dist;
-      let ny = dy / dist;
-      ball.vx = nx * data.force * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER;
-      ball.vy = ny * data.force * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER;
+      if (dist < HIT_RADIUS && dist > 0) {
+        let nx = dx / dist;
+        let ny = dy / dist;
+        ball.vx = nx * data.force * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER;
+        ball.vy = ny * data.force * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER;
+        hitAny = true;
+      }
     }
 
     if (conductor) {
       io.to(conductor).emit("player-swing", {
         id: socket.id,
         force: data.force,
-        hit: hit,
+        hit: hitAny,
       });
     }
   });
@@ -117,6 +156,11 @@ io.on("connection", (socket) => {
   socket.on("disconnect", function () {
     console.log("someone disconnected", socket.id);
 
+    let leaving = players.find((p) => p.id === socket.id);
+    if (leaving && leaving.emoji) {
+      delete takenEmojis[leaving.emoji];
+      socket.broadcast.emit("emoji-freed", leaving.emoji);
+    }
     players = players.filter((p) => p.id !== socket.id);
 
     if (socket.id === conductor) {

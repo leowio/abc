@@ -8,60 +8,58 @@ if (
   socket = io();
 }
 
-let stage = document.querySelector(".stage");
 let debugStrip = document.querySelector(".debug-strip");
-let playerCountEl = document.querySelector("#player-count");
 let playerCount = 0;
 
-let ballEl = document.createElement("div");
-ballEl.className = "ball";
-ballEl.innerText = "🎾";
-stage.append(ballEl);
+let players = {};
+let balls = [];
+
+let HIT_RADIUS = 0.06;
+let BALL_SIZE = 30;
+let SWING_FLASH_DURATION = 300;
+
+let COURT_COLOR = [30, 80, 45];
+let COURT_LINE_COLOR = [60, 120, 70];
+let RING_COLOR = [255, 255, 255, 60];
+let RING_STROKE_COLOR = [255, 255, 255, 80];
+let HIT_FLASH_COLOR = [255, 255, 100];
+let MISS_FLASH_COLOR = [255, 100, 100];
+let PLAYER_LABEL_COLOR = [200, 200, 200];
 
 socket.emit("my-role", { role: "conductor" });
 
 socket.on("game-state", function (data) {
-  data.players.forEach(function (player) {
-    addPlayer(player.id, player.x, player.y);
+  data.players.forEach(function (p) {
+    addPlayer(p.id, p.x, p.y, p.emoji);
   });
-  updateBall(data.ball);
+  balls = data.balls;
 });
 
 socket.on("new-player", function (data) {
-  addPlayer(data.id, data.x, data.y);
+  addPlayer(data.id, data.x, data.y, data.emoji);
 });
 
 socket.on("delete-player", function (data) {
-  let el = document.querySelector("#player-" + data.id);
-  if (el) el.remove();
+  delete players[data.id];
   let card = document.querySelector("#card-" + data.id);
   if (card) card.remove();
   playerCount--;
-  playerCountEl.innerText = "Players: " + playerCount;
 });
 
-socket.on("ball-update", function (data) {
-  updateBall(data);
+socket.on("balls-update", function (data) {
+  balls = data;
+});
+
+socket.on("new-ball", function (data) {
+  balls.push(data);
 });
 
 socket.on("player-swing", function (data) {
-  let el = document.querySelector("#player-" + data.id);
-  if (!el) return;
+  let p = players[data.id];
+  if (!p) return;
 
-  let ring = el.querySelector(".hit-ring");
-
-  if (data.hit) {
-    ring.style.borderColor = "rgba(255, 255, 100, 0.9)";
-    ring.style.transform = "translate(-50%, -50%) scale(1.3)";
-  } else {
-    ring.style.borderColor = "rgba(255, 100, 100, 0.7)";
-    ring.style.transform = "translate(-50%, -50%) scale(1.1)";
-  }
-
-  setTimeout(function () {
-    ring.style.borderColor = "rgba(255, 255, 255, 0.3)";
-    ring.style.transform = "translate(-50%, -50%) scale(1)";
-  }, 300);
+  p.flashUntil = millis() + SWING_FLASH_DURATION;
+  p.lastHit = data.hit;
 
   let card = document.querySelector("#card-" + data.id);
   if (card) {
@@ -73,38 +71,18 @@ socket.on("player-swing", function (data) {
       : "rgb(50, 50, 50)";
     setTimeout(function () {
       card.style.backgroundColor = "rgb(50, 50, 50)";
-    }, 300);
+    }, SWING_FLASH_DURATION);
   }
 });
 
-function updateBall(data) {
-  let stageRect = stage.getBoundingClientRect();
-  ballEl.style.left = data.x * stageRect.width + "px";
-  ballEl.style.top = data.y * stageRect.height + "px";
-}
-
-function addPlayer(socketID, px, py) {
-  let stageRect = stage.getBoundingClientRect();
-
-  let el = document.createElement("div");
-  el.className = "player";
-  el.id = "player-" + socketID;
-  el.style.left = px * stageRect.width + "px";
-  el.style.top = py * stageRect.height + "px";
-
-  let ring = document.createElement("div");
-  ring.className = "hit-ring";
-
-  let emoji = document.createElement("span");
-  emoji.className = "player-emoji";
-  emoji.innerText = "🏓";
-
-  let name = document.createElement("span");
-  name.className = "player-name";
-  name.innerText = socketID.substring(0, 4);
-
-  el.append(ring, emoji, name);
-  stage.append(el);
+function addPlayer(socketID, px, py, emoji) {
+  players[socketID] = {
+    x: px,
+    y: py,
+    emoji: emoji || "🏓",
+    flashUntil: 0,
+    lastHit: false,
+  };
 
   let card = document.createElement("div");
   card.className = "player-card";
@@ -112,7 +90,7 @@ function addPlayer(socketID, px, py) {
 
   let label = document.createElement("div");
   label.className = "player-label";
-  label.innerText = socketID.substring(0, 6);
+  label.innerText = (emoji || "🏓") + " " + socketID.substring(0, 6);
 
   let valForce = document.createElement("p");
   valForce.className = "val-force";
@@ -126,5 +104,82 @@ function addPlayer(socketID, px, py) {
   debugStrip.append(card);
 
   playerCount++;
-  playerCountEl.innerText = "Players: " + playerCount;
+}
+
+function setup() {
+  let canvas = createCanvas(windowWidth, windowHeight - 120);
+  canvas.parent("p5-canvas-container");
+  textFont("monospace");
+}
+
+function keyPressed() {
+  if (key === "r" || key === "R") {
+    socket.emit("reset-balls");
+  }
+}
+
+function mousePressed() {
+  if (mouseY < 40 && mouseX > width - 120) {
+    socket.emit("reset-balls");
+  }
+}
+
+function draw() {
+  background(COURT_COLOR);
+  drawCourt();
+  drawPlayers();
+  drawBalls();
+}
+
+function drawCourt() {
+  stroke(COURT_LINE_COLOR);
+  strokeWeight(2);
+  noFill();
+  rect(0, 0, width, height);
+  line(width / 2, 0, width / 2, height);
+  ellipse(width / 2, height / 2, 150, 150);
+}
+
+function drawBalls() {
+  noStroke();
+  textAlign(CENTER, CENTER);
+  textSize(BALL_SIZE);
+  for (let b of balls) {
+    text("🎾", b.x * width, b.y * height);
+  }
+}
+
+function drawPlayers() {
+  let now = millis();
+
+  for (let id in players) {
+    let p = players[id];
+    let px = p.x * width;
+    let py = p.y * height;
+    let ringR = HIT_RADIUS * width;
+
+    let flashing = now < p.flashUntil;
+
+    if (flashing) {
+      let flashColor = p.lastHit ? HIT_FLASH_COLOR : MISS_FLASH_COLOR;
+      let flashAlpha = map(p.flashUntil - now, 0, SWING_FLASH_DURATION, 0, 120);
+      fill(flashColor[0], flashColor[1], flashColor[2], flashAlpha);
+      noStroke();
+      ellipse(px, py, ringR * 2.5, ringR * 2.5);
+    }
+
+    stroke(RING_STROKE_COLOR);
+    strokeWeight(2);
+    ellipse(px, py, ringR * 2, ringR * 2);
+
+    noStroke();
+    fill(0, 0, 0);
+    textAlign(CENTER, CENTER);
+    textSize(50);
+    text(p.emoji, px, py);
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight - 120);
 }

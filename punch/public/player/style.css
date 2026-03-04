@@ -24,6 +24,38 @@ body {
   font-weight: bold;
 }
 
+#emoji-picker {
+  display: none;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  padding: 20px;
+  max-width: 340px;
+}
+
+#emoji-picker .emoji-btn {
+  font-size: 2.4rem;
+  width: 60px;
+  height: 60px;
+  border: 2px solid #333;
+  border-radius: 12px;
+  background-color: #222;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+#emoji-picker .emoji-btn:active {
+  background-color: #444;
+  border-color: #fff;
+}
+
+#chosen-emoji {
+  display: none;
+  font-size: 5rem;
+}
+
 #debug {
   position: fixed;
   bottom: 0;

@@ -9,30 +9,83 @@ if (
 }
 
 let startButton = document.querySelector("#start");
+let emojiPicker = document.querySelector("#emoji-picker");
+let chosenEmojiEl = document.querySelector("#chosen-emoji");
 
 let SWING_THRESHOLD = 15;
 let FORCE_MAX = 40;
 let SWING_COOLDOWN = 400;
 let canSwing = true;
+let availableEmojis = [];
+
+socket.on("available-emojis", function (data) {
+  availableEmojis = data;
+  renderEmojis();
+});
+
+socket.on("emoji-taken", function (emoji) {
+  availableEmojis = availableEmojis.filter(function (e) {
+    return e !== emoji;
+  });
+  renderEmojis();
+});
+
+socket.on("emoji-freed", function (emoji) {
+  if (availableEmojis.indexOf(emoji) === -1) {
+    availableEmojis.push(emoji);
+  }
+  renderEmojis();
+});
+
+socket.on("emoji-rejected", function () {
+  emojiPicker.style.display = "grid";
+  chosenEmojiEl.style.display = "none";
+});
 
 startButton.addEventListener("click", function () {
   if (typeof DeviceMotionEvent.requestPermission === "function") {
     DeviceMotionEvent.requestPermission()
       .then(function (state) {
         if (state === "granted") {
-          startGame();
+          showEmojiPicker();
         }
       })
       .catch(console.error);
   } else {
-    startGame();
+    showEmojiPicker();
   }
 });
 
-function startGame() {
+function showEmojiPicker() {
   startButton.style.display = "none";
-  socket.emit("my-role", { role: "player" });
+  emojiPicker.style.display = "grid";
+  renderEmojis();
+}
 
+function renderEmojis() {
+  if (emojiPicker.style.display === "none") return;
+  emojiPicker.innerHTML = "";
+  for (let i = 0; i < availableEmojis.length; i++) {
+    let emoji = availableEmojis[i];
+    let btn = document.createElement("button");
+    btn.className = "emoji-btn";
+    btn.innerText = emoji;
+    btn.addEventListener("click", function () {
+      pickEmoji(emoji);
+    });
+    emojiPicker.appendChild(btn);
+  }
+}
+
+function pickEmoji(emoji) {
+  emojiPicker.style.display = "none";
+  chosenEmojiEl.innerText = emoji;
+  chosenEmojiEl.style.display = "block";
+  socket.emit("my-role", { role: "player", emoji: emoji });
+  startMotionListener();
+}
+
+function startMotionListener() {
   window.addEventListener("devicemotion", function (event) {
     let acc = event.acceleration;
     if (!acc) return;
