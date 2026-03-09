@@ -26,7 +26,7 @@ let ANIMAL_EMOJIS = [
 ];
 let takenEmojis = {};
 
-let HIT_RADIUS = 0.08;
+let HIT_RADIUS = 0.2;
 let BALL_FRICTION = 0;
 let BALL_BOUNCE_DAMPING = 0.8;
 let HIT_FORCE_MULTIPLIER = 1.5;
@@ -56,7 +56,7 @@ function findBall(ballId) {
 
 function spawnBallNearPlayer(player) {
   let angle = Math.random() * Math.PI * 2;
-  let dist = 0.02 + Math.random() * (HIT_RADIUS - 0.02);
+  let dist = 0.02 + Math.random() * (ORBIT_RADIUS - 0.02);
   let bx = clamp01(player.x + Math.cos(angle) * dist);
   let by = clamp01(player.y + Math.sin(angle) * dist);
   let ball = {
@@ -99,8 +99,8 @@ setInterval(function () {
         ball.holderId = null;
       } else {
         ball.orbitAngle += ORBIT_SPEED;
-        ball.x = clamp01(holder.x + Math.cos(ball.orbitAngle) * ORBIT_RADIUS);
-        ball.y = clamp01(holder.y + Math.sin(ball.orbitAngle) * ORBIT_RADIUS);
+        ball.x = holder.x + Math.cos(ball.orbitAngle) * ORBIT_RADIUS;
+        ball.y = holder.y + Math.sin(ball.orbitAngle) * ORBIT_RADIUS;
         ball.vx = 0;
         ball.vy = 0;
         continue;

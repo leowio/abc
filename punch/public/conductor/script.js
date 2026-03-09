@@ -125,6 +125,18 @@ function mousePressed() {
   }
 }
 
+function fieldSize() {
+  return Math.min(width, height);
+}
+
+function fieldX(nx) {
+  return (width - fieldSize()) / 2 + nx * fieldSize();
+}
+
+function fieldY(ny) {
+  return (height - fieldSize()) / 2 + ny * fieldSize();
+}
+
 function draw() {
   background(COURT_COLOR);
   drawCourt();
@@ -133,12 +145,15 @@ function draw() {
 }
 
 function drawCourt() {
+  let fs = fieldSize();
+  let fx = (width - fs) / 2;
+  let fy = (height - fs) / 2;
   stroke(COURT_LINE_COLOR);
   strokeWeight(2);
   noFill();
-  rect(0, 0, width, height);
-  line(width / 2, 0, width / 2, height);
-  ellipse(width / 2, height / 2, 150, 150);
+  rect(fx, fy, fs, fs);
+  line(fx + fs / 2, fy, fx + fs / 2, fy + fs);
+  ellipse(fx + fs / 2, fy + fs / 2, 150, 150);
 }
 
 function drawBalls() {
@@ -146,18 +161,19 @@ function drawBalls() {
   textAlign(CENTER, CENTER);
   textSize(BALL_SIZE);
   for (let b of balls) {
-    text(BALL_EMOJI, b.x * width, b.y * height);
+    text(BALL_EMOJI, fieldX(b.x), fieldY(b.y));
   }
 }
 
 function drawPlayers() {
   let now = millis();
+  let fs = fieldSize();
 
   for (let id in players) {
     let p = players[id];
-    let px = p.x * width;
-    let py = p.y * height;
-    let ringR = HIT_RADIUS * width;
+    let px = fieldX(p.x);
+    let py = fieldY(p.y);
+    let ringR = HIT_RADIUS * fs;
 
     let flashing = now < p.flashUntil;
 
