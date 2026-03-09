@@ -3,7 +3,7 @@ if (
   location.hostname.toLowerCase().startsWith("browsercircus") ||
   location.hostname.toLowerCase().startsWith("www")
 ) {
-  socket = io({ path: "/YOUR-NAME/YOUR-PORT/socket.io" });
+  socket = io({ path: "/leo/4210/socket.io" });
 } else {
   socket = io();
 }
