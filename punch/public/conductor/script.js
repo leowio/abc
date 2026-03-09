@@ -14,8 +14,9 @@ let playerCount = 0;
 let players = {};
 let balls = [];
 
-let HIT_RADIUS = 0.06;
+let HIT_RADIUS = 0.08;
 let BALL_SIZE = 30;
+let BALL_EMOJI = "⚽";
 let SWING_FLASH_DURATION = 300;
 
 let COURT_COLOR = [30, 80, 45];
@@ -145,7 +146,7 @@ function drawBalls() {
   textAlign(CENTER, CENTER);
   textSize(BALL_SIZE);
   for (let b of balls) {
-    text("🎾", b.x * width, b.y * height);
+    text(BALL_EMOJI, b.x * width, b.y * height);
   }
 }
 

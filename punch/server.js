@@ -27,34 +27,90 @@ let ANIMAL_EMOJIS = [
 let takenEmojis = {};
 
 let HIT_RADIUS = 0.08;
-let BALL_FRICTION = 0.995;
+let BALL_FRICTION = 0;
 let BALL_BOUNCE_DAMPING = 0.8;
-let HIT_FORCE_MULTIPLIER = 3;
-let BALL_BASE_SPEED = 0.08;
+let HIT_FORCE_MULTIPLIER = 1.5;
+let BALL_BASE_SPEED = 0.03;
+let ORBIT_RADIUS = 0.055;
+let ORBIT_SPEED = 0.18;
 let TICK_RATE = 33;
 
 let balls = [];
 let nextBallId = 0;
 
+function clamp01(value) {
+  return Math.max(0, Math.min(1, value));
+}
+
+function findPlayer(playerId) {
+  return players.find(function (p) {
+    return p.id === playerId;
+  });
+}
+
+function findBall(ballId) {
+  return balls.find(function (b) {
+    return b.id === ballId;
+  });
+}
+
 function spawnBallNearPlayer(player) {
   let angle = Math.random() * Math.PI * 2;
   let dist = 0.02 + Math.random() * (HIT_RADIUS - 0.02);
-  let bx = Math.max(0, Math.min(1, player.x + Math.cos(angle) * dist));
-  let by = Math.max(0, Math.min(1, player.y + Math.sin(angle) * dist));
-  let ball = { id: nextBallId++, x: bx, y: by, vx: 0, vy: 0 };
+  let bx = clamp01(player.x + Math.cos(angle) * dist);
+  let by = clamp01(player.y + Math.sin(angle) * dist);
+  let ball = {
+    id: nextBallId++,
+    x: bx,
+    y: by,
+    vx: 0,
+    vy: 0,
+    holderId: null,
+    orbitAngle: angle,
+  };
   balls.push(ball);
   if (conductor) {
     io.to(conductor).emit("new-ball", ball);
   }
 }
 
+function dropHeldBall(playerId) {
+  let player = findPlayer(playerId);
+  if (!player || player.heldBallId == null) return null;
+
+  let ball = findBall(player.heldBallId);
+  player.heldBallId = null;
+
+  if (!ball) return null;
+
+  ball.holderId = null;
+  ball.vx = 0;
+  ball.vy = 0;
+  return ball;
+}
+
 setInterval(function () {
   for (let i = balls.length - 1; i >= 0; i--) {
     let ball = balls[i];
+
+    if (ball.holderId) {
+      let holder = findPlayer(ball.holderId);
+      if (!holder) {
+        ball.holderId = null;
+      } else {
+        ball.orbitAngle += ORBIT_SPEED;
+        ball.x = clamp01(holder.x + Math.cos(ball.orbitAngle) * ORBIT_RADIUS);
+        ball.y = clamp01(holder.y + Math.sin(ball.orbitAngle) * ORBIT_RADIUS);
+        ball.vx = 0;
+        ball.vy = 0;
+        continue;
+      }
+    }
+
     ball.x += ball.vx;
     ball.y += ball.vy;
-    ball.vx *= BALL_FRICTION;
-    ball.vy *= BALL_FRICTION;
+    ball.vx *= 1 - BALL_FRICTION;
+    ball.vy *= 1 - BALL_FRICTION;
 
     if (ball.x <= 0) {
       ball.x = 0;
@@ -103,6 +159,7 @@ io.on("connection", (socket) => {
         x: 0.1 + Math.random() * 0.8,
         y: 0.1 + Math.random() * 0.8,
         emoji: emoji,
+        heldBallId: null,
       };
       players.push(player);
       console.log(players);
@@ -118,6 +175,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on("reset-balls", function () {
+    for (let p of players) {
+      p.heldBallId = null;
+    }
     balls = [];
     for (let p of players) {
       spawnBallNearPlayer(p);
@@ -125,21 +185,63 @@ io.on("connection", (socket) => {
   });
 
   socket.on("swing", function (data) {
-    let player = players.find((p) => p.id === socket.id);
+    let player = findPlayer(socket.id);
     if (!player) return;
 
+    let swingForce = Math.max(0, Math.min(Number(data.force) || 0, 1));
     let hitAny = false;
 
-    for (let ball of balls) {
-      let dx = ball.x - player.x;
-      let dy = ball.y - player.y;
-      let dist = Math.sqrt(dx * dx + dy * dy);
+    if (player.heldBallId != null) {
+      let heldBall = findBall(player.heldBallId);
+      if (heldBall) {
+        let launchAngle = heldBall.orbitAngle;
+        heldBall.holderId = null;
+        player.heldBallId = null;
+        heldBall.vx =
+          Math.cos(launchAngle) *
+          swingForce *
+          BALL_BASE_SPEED *
+          HIT_FORCE_MULTIPLIER;
+        heldBall.vy =
+          Math.sin(launchAngle) *
+          swingForce *
+          BALL_BASE_SPEED *
+          HIT_FORCE_MULTIPLIER;
+        hitAny = true;
+      } else {
+        player.heldBallId = null;
+      }
+    }
 
-      if (dist < HIT_RADIUS && dist > 0) {
-        let nx = dx / dist;
-        let ny = dy / dist;
-        ball.vx = nx * data.force * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER;
-        ball.vy = ny * data.force * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER;
+    if (!hitAny && player.heldBallId == null) {
+      let closestBall = null;
+      let closestDist = Infinity;
+
+      for (let ball of balls) {
+        if (ball.holderId) continue;
+
+        let dx = ball.x - player.x;
+        let dy = ball.y - player.y;
+        let dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < HIT_RADIUS && dist < closestDist) {
+          closestBall = ball;
+          closestDist = dist;
+        }
+      }
+
+      if (closestBall) {
+        let catchAngle =
+          closestDist > 0
+            ? Math.atan2(closestBall.y - player.y, closestBall.x - player.x)
+            : Math.random() * Math.PI * 2;
+        closestBall.holderId = player.id;
+        closestBall.orbitAngle = catchAngle;
+        closestBall.vx = 0;
+        closestBall.vy = 0;
+        closestBall.x = clamp01(player.x + Math.cos(catchAngle) * ORBIT_RADIUS);
+        closestBall.y = clamp01(player.y + Math.sin(catchAngle) * ORBIT_RADIUS);
+        player.heldBallId = closestBall.id;
         hitAny = true;
       }
     }
@@ -157,6 +259,9 @@ io.on("connection", (socket) => {
     console.log("someone disconnected", socket.id);
 
     let leaving = players.find((p) => p.id === socket.id);
+    if (leaving) {
+      dropHeldBall(leaving.id);
+    }
     if (leaving && leaving.emoji) {
       delete takenEmojis[leaving.emoji];
       socket.broadcast.emit("emoji-freed", leaving.emoji);
