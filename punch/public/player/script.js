@@ -51,6 +51,19 @@ socket.on("team-assigned", function (data) {
   }
 });
 
+socket.on("health-update", function (data) {
+  let healthEl = document.querySelector("#health");
+  let hearts = "";
+  for (let i = 0; i < data.health; i++) hearts += "\u2764\uFE0F";
+  healthEl.innerText = hearts;
+});
+
+socket.on("player-died", function () {
+  chosenEmojiEl.innerText = "\u{1F47B}";
+  let wrapper = document.querySelector(".main-wrapper");
+  wrapper.style.backgroundColor = "#222";
+});
+
 startButton.addEventListener("click", function () {
   if (typeof DeviceMotionEvent.requestPermission === "function") {
     DeviceMotionEvent.requestPermission()
@@ -90,6 +103,9 @@ function pickEmoji(emoji) {
   emojiPicker.style.display = "none";
   chosenEmojiEl.innerText = emoji;
   chosenEmojiEl.style.display = "block";
+  let healthEl = document.querySelector("#health");
+  healthEl.style.display = "block";
+  healthEl.innerText = "\u2764\uFE0F".repeat(10);
   socket.emit("my-role", { role: "player", emoji: emoji });
   startMotionListener();
 }

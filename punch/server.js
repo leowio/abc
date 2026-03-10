@@ -62,12 +62,14 @@ let ANIMAL_EMOJIS = [
 ];
 let takenEmojis = {};
 
-let HIT_RADIUS = 0.2;
+let HIT_RADIUS = 0.15;
 let BALL_FRICTION = 0;
 let BALL_BOUNCE_DAMPING = 0.8;
 let HIT_FORCE_MULTIPLIER = 1.5;
 let BALL_BASE_SPEED = 0.03;
-let ORBIT_RADIUS = 0.055;
+let BALL_SPEED_INCREMENT = 0.15;
+let PLAYER_MAX_HEALTH = 10;
+let ORBIT_RADIUS = 0.08;
 let ORBIT_SPEED = 0.18;
 let TICK_RATE = 33;
 
@@ -103,6 +105,8 @@ function spawnBallNearPlayer(player) {
     vy: 0,
     holderId: null,
     orbitAngle: angle,
+    hitCount: 0,
+    nearPlayers: {},
   };
   balls.push(ball);
   if (conductor) {
@@ -166,6 +170,44 @@ setInterval(function () {
     }
   }
 
+  // hit detection: ball passes through player radius uncaught
+  for (let ball of balls) {
+    if (ball.holderId) continue;
+    let speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+    if (speed < 0.001) {
+      ball.nearPlayers = {};
+      continue;
+    }
+
+    for (let player of players) {
+      if (!player.alive) continue;
+      let dx = ball.x - player.x;
+      let dy = ball.y - player.y;
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      let inside = dist < ORBIT_RADIUS - 0.01;
+
+      if (inside && !ball.nearPlayers[player.id]) {
+        ball.nearPlayers[player.id] = true;
+      } else if (!inside && ball.nearPlayers[player.id]) {
+        delete ball.nearPlayers[player.id];
+        // ball passed through without being caught
+        player.health--;
+        io.to(player.id).emit("health-update", { health: player.health });
+        if (conductor) {
+          io.to(conductor).emit("player-hit", { id: player.id, health: player.health });
+        }
+        if (player.health <= 0) {
+          player.alive = false;
+          dropHeldBall(player.id);
+          io.to(player.id).emit("player-died");
+          if (conductor) {
+            io.to(conductor).emit("player-died", { id: player.id });
+          }
+        }
+      }
+    }
+  }
+
   if (conductor) {
     io.to(conductor).emit("balls-update", balls);
   }
@@ -200,6 +242,8 @@ io.on("connection", (socket) => {
         y: py,
         emoji: emoji,
         team: team,
+        health: PLAYER_MAX_HEALTH,
+        alive: true,
         heldBallId: null,
       };
       players.push(player);
@@ -228,7 +272,7 @@ io.on("connection", (socket) => {
 
   socket.on("swing", function (data) {
     let player = findPlayer(socket.id);
-    if (!player) return;
+    if (!player || !player.alive) return;
 
     let swingForce = Math.max(0, Math.min(Number(data.force) || 0, 1));
     let hitAny = false;
@@ -239,16 +283,19 @@ io.on("connection", (socket) => {
         let launchAngle = heldBall.orbitAngle;
         heldBall.holderId = null;
         player.heldBallId = null;
+        let speedMult = 1 + heldBall.hitCount * BALL_SPEED_INCREMENT;
         heldBall.vx =
           Math.cos(launchAngle) *
           swingForce *
           BALL_BASE_SPEED *
-          HIT_FORCE_MULTIPLIER;
+          HIT_FORCE_MULTIPLIER *
+          speedMult;
         heldBall.vy =
           Math.sin(launchAngle) *
           swingForce *
           BALL_BASE_SPEED *
-          HIT_FORCE_MULTIPLIER;
+          HIT_FORCE_MULTIPLIER *
+          speedMult;
         hitAny = true;
       } else {
         player.heldBallId = null;
@@ -277,6 +324,8 @@ io.on("connection", (socket) => {
           closestDist > 0
             ? Math.atan2(closestBall.y - player.y, closestBall.x - player.x)
             : Math.random() * Math.PI * 2;
+        closestBall.hitCount++;
+        delete closestBall.nearPlayers[player.id];
         closestBall.holderId = player.id;
         closestBall.orbitAngle = catchAngle;
         closestBall.vx = 0;

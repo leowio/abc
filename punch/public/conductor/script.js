@@ -20,6 +20,7 @@ let HIT_RADIUS = 0.08;
 let BALL_SIZE = 30;
 let BALL_EMOJI = "⚽";
 let SWING_FLASH_DURATION = 300;
+let EXPLOSION_DURATION = 500;
 
 let COURT_COLOR = [30, 80, 45];
 let COURT_LINE_COLOR = [60, 120, 70];
@@ -33,14 +34,14 @@ socket.emit("my-role", { role: "conductor" });
 
 socket.on("game-state", function (data) {
   data.players.forEach(function (p) {
-    addPlayer(p.id, p.x, p.y, p.emoji, p.team);
+    addPlayer(p.id, p.x, p.y, p.emoji, p.team, p.health, p.alive);
   });
   balls = data.balls;
   updateTeamBar();
 });
 
 socket.on("new-player", function (data) {
-  addPlayer(data.id, data.x, data.y, data.emoji, data.team);
+  addPlayer(data.id, data.x, data.y, data.emoji, data.team, data.health, data.alive);
   updateTeamBar();
 });
 
@@ -58,6 +59,21 @@ socket.on("balls-update", function (data) {
 
 socket.on("new-ball", function (data) {
   balls.push(data);
+});
+
+socket.on("player-hit", function (data) {
+  let p = players[data.id];
+  if (!p) return;
+  p.health = data.health;
+  p.explosionUntil = millis() + EXPLOSION_DURATION;
+});
+
+socket.on("player-died", function (data) {
+  let p = players[data.id];
+  if (!p) return;
+  p.alive = false;
+  p.health = 0;
+  updateTeamBar();
 });
 
 socket.on("player-swing", function (data) {
@@ -86,21 +102,25 @@ function updateTeamBar() {
   let redEmojis = "";
   for (let id in players) {
     let p = players[id];
-    if (p.team === "blue") blueEmojis += p.emoji;
-    else if (p.team === "red") redEmojis += p.emoji;
+    let display = p.alive ? p.emoji : "\u{1FAA6}";
+    if (p.team === "blue") blueEmojis += display;
+    else if (p.team === "red") redEmojis += display;
   }
   blueMembers.innerText = blueEmojis;
   redMembers.innerText = redEmojis;
 }
 
-function addPlayer(socketID, px, py, emoji, team) {
+function addPlayer(socketID, px, py, emoji, team, health, alive) {
   players[socketID] = {
     x: px,
     y: py,
-    emoji: emoji || "🏓",
+    emoji: emoji || "\u{1F3D3}",
     team: team || "blue",
+    health: health != null ? health : 3,
+    alive: alive != null ? alive : true,
     flashUntil: 0,
     lastHit: false,
+    explosionUntil: 0,
   };
 
   let card = document.createElement("div");
@@ -189,9 +209,21 @@ function drawPlayers() {
 
   for (let id in players) {
     let p = players[id];
+    if (!p.alive) continue;
+
     let px = fieldX(p.x);
     let py = fieldY(p.y);
     let ringR = HIT_RADIUS * fs;
+
+    // explosion flash when hit
+    if (now < p.explosionUntil) {
+      let alpha = map(p.explosionUntil - now, 0, EXPLOSION_DURATION, 0, 255);
+      noStroke();
+      textAlign(CENTER, CENTER);
+      textSize(70);
+      fill(255, 255, 255, alpha);
+      text("\u{1F4A5}", px, py);
+    }
 
     let flashing = now < p.flashUntil;
 
@@ -218,6 +250,7 @@ function drawPlayers() {
     textAlign(CENTER, CENTER);
     textSize(50);
     text(p.emoji, px, py);
+
   }
 }
 
