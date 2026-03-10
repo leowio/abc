@@ -124,16 +124,23 @@ function mousePressed() {
   }
 }
 
-function fieldSize() {
-  return Math.min(width, height);
+function fieldW() {
+  let fitByWidth = width;
+  let fitByHeight = height * (16 / 9);
+  let fw = Math.min(fitByWidth, fitByHeight);
+  return fw;
+}
+
+function fieldH() {
+  return fieldW() * 9 / 16;
 }
 
 function fieldX(nx) {
-  return (width - fieldSize()) / 2 + nx * fieldSize();
+  return (width - fieldW()) / 2 + nx * fieldW();
 }
 
 function fieldY(ny) {
-  return (height - fieldSize()) / 2 + ny * fieldSize();
+  return (height - fieldH()) / 2 + ny * fieldH();
 }
 
 function draw() {
@@ -144,15 +151,16 @@ function draw() {
 }
 
 function drawCourt() {
-  let fs = fieldSize();
-  let fx = (width - fs) / 2;
-  let fy = (height - fs) / 2;
+  let fw = fieldW();
+  let fh = fieldH();
+  let fx = (width - fw) / 2;
+  let fy = (height - fh) / 2;
   stroke(COURT_LINE_COLOR);
   strokeWeight(2);
   noFill();
-  rect(fx, fy, fs, fs);
-  line(fx + fs / 2, fy, fx + fs / 2, fy + fs);
-  ellipse(fx + fs / 2, fy + fs / 2, 150, 150);
+  rect(fx, fy, fw, fh);
+  line(fx + fw / 2, fy, fx + fw / 2, fy + fh);
+  ellipse(fx + fw / 2, fy + fh / 2, 150, 150);
 }
 
 function drawBalls() {
@@ -166,7 +174,7 @@ function drawBalls() {
 
 function drawPlayers() {
   let now = millis();
-  let fs = fieldSize();
+  let fw = fieldW();
 
   for (let id in players) {
     let p = players[id];
@@ -174,7 +182,7 @@ function drawPlayers() {
 
     let px = fieldX(p.x);
     let py = fieldY(p.y);
-    let ringR = HIT_RADIUS * fs;
+    let ringR = HIT_RADIUS * fw;
 
     // explosion flash when hit
     if (now < p.explosionUntil) {
