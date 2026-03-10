@@ -9,6 +9,8 @@ if (
 }
 
 let debugStrip = document.querySelector(".debug-strip");
+let blueMembers = document.querySelector("#blue-members");
+let redMembers = document.querySelector("#red-members");
 let playerCount = 0;
 
 let players = {};
@@ -31,13 +33,15 @@ socket.emit("my-role", { role: "conductor" });
 
 socket.on("game-state", function (data) {
   data.players.forEach(function (p) {
-    addPlayer(p.id, p.x, p.y, p.emoji);
+    addPlayer(p.id, p.x, p.y, p.emoji, p.team);
   });
   balls = data.balls;
+  updateTeamBar();
 });
 
 socket.on("new-player", function (data) {
-  addPlayer(data.id, data.x, data.y, data.emoji);
+  addPlayer(data.id, data.x, data.y, data.emoji, data.team);
+  updateTeamBar();
 });
 
 socket.on("delete-player", function (data) {
@@ -45,6 +49,7 @@ socket.on("delete-player", function (data) {
   let card = document.querySelector("#card-" + data.id);
   if (card) card.remove();
   playerCount--;
+  updateTeamBar();
 });
 
 socket.on("balls-update", function (data) {
@@ -76,11 +81,24 @@ socket.on("player-swing", function (data) {
   }
 });
 
-function addPlayer(socketID, px, py, emoji) {
+function updateTeamBar() {
+  let blueEmojis = "";
+  let redEmojis = "";
+  for (let id in players) {
+    let p = players[id];
+    if (p.team === "blue") blueEmojis += p.emoji;
+    else if (p.team === "red") redEmojis += p.emoji;
+  }
+  blueMembers.innerText = blueEmojis;
+  redMembers.innerText = redEmojis;
+}
+
+function addPlayer(socketID, px, py, emoji, team) {
   players[socketID] = {
     x: px,
     y: py,
     emoji: emoji || "🏓",
+    team: team || "blue",
     flashUntil: 0,
     lastHit: false,
   };
@@ -108,7 +126,7 @@ function addPlayer(socketID, px, py, emoji) {
 }
 
 function setup() {
-  let canvas = createCanvas(windowWidth, windowHeight - 120);
+  let canvas = createCanvas(windowWidth, windowHeight - 170);
   canvas.parent("p5-canvas-container");
   textFont("monospace");
 }
@@ -185,7 +203,13 @@ function drawPlayers() {
       ellipse(px, py, ringR * 2.5, ringR * 2.5);
     }
 
-    stroke(RING_STROKE_COLOR);
+    if (p.team === "red") {
+      stroke(255, 74, 74, 180);
+      fill(255, 74, 74, 40);
+    } else {
+      stroke(74, 158, 255, 180);
+      fill(74, 158, 255, 40);
+    }
     strokeWeight(2);
     ellipse(px, py, ringR * 2, ringR * 2);
 
@@ -198,5 +222,5 @@ function drawPlayers() {
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight - 120);
+  resizeCanvas(windowWidth, windowHeight - 170);
 }

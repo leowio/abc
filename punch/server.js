@@ -20,6 +20,42 @@ const io = new Server(HTTPSserver);
 let players = [];
 let conductor;
 
+function getTeamCount(team) {
+  return players.filter(function (p) { return p.team === team; }).length;
+}
+
+function assignTeam() {
+  let blueCount = getTeamCount("blue");
+  let redCount = getTeamCount("red");
+  return redCount < blueCount ? "red" : "blue";
+}
+
+let MIN_PLAYER_DIST = 0.15;
+
+function findSpawnPosition(team) {
+  let xMin = team === "blue" ? 0.05 : 0.55;
+  let xRange = 0.4;
+  let yMin = 0.1;
+  let yRange = 0.8;
+
+  for (let attempt = 0; attempt < 50; attempt++) {
+    let px = xMin + Math.random() * xRange;
+    let py = yMin + Math.random() * yRange;
+    let tooClose = false;
+    for (let i = 0; i < players.length; i++) {
+      let dx = players[i].x - px;
+      let dy = players[i].y - py;
+      if (Math.sqrt(dx * dx + dy * dy) < MIN_PLAYER_DIST) {
+        tooClose = true;
+        break;
+      }
+    }
+    if (!tooClose) return { x: px, y: py };
+  }
+  // fallback: return random position if no gap found
+  return { x: xMin + Math.random() * xRange, y: yMin + Math.random() * yRange };
+}
+
 let ANIMAL_EMOJIS = [
   "🐶", "🐱", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸",
   "🐵", "🐔", "🐧", "🦊", "🦝", "🦄", "🐴", "🐺", "🐰", "🐙"
@@ -154,15 +190,21 @@ io.on("connection", (socket) => {
         return;
       }
       takenEmojis[emoji] = socket.id;
+      let team = assignTeam();
+      let spawn = findSpawnPosition(team);
+      let px = spawn.x;
+      let py = spawn.y;
       let player = {
         id: socket.id,
-        x: 0.1 + Math.random() * 0.8,
-        y: 0.1 + Math.random() * 0.8,
+        x: px,
+        y: py,
         emoji: emoji,
+        team: team,
         heldBallId: null,
       };
       players.push(player);
       console.log(players);
+      socket.emit("team-assigned", { team: team });
       socket.broadcast.emit("emoji-taken", emoji);
       if (conductor) {
         io.to(conductor).emit("new-player", player);

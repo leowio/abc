@@ -42,6 +42,15 @@ socket.on("emoji-rejected", function () {
   chosenEmojiEl.style.display = "none";
 });
 
+socket.on("team-assigned", function (data) {
+  let wrapper = document.querySelector(".main-wrapper");
+  if (data.team === "blue") {
+    wrapper.style.backgroundColor = "#1a3a5c";
+  } else {
+    wrapper.style.backgroundColor = "#5c1a1a";
+  }
+});
+
 startButton.addEventListener("click", function () {
   if (typeof DeviceMotionEvent.requestPermission === "function") {
     DeviceMotionEvent.requestPermission()

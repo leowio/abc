@@ -13,6 +13,18 @@
     <script src="../socket.io/socket.io.js"></script>
   </head>
   <body>
+    <div id="team-bar">
+      <div id="team-blue" class="team-panel">
+        <span class="team-dot blue-dot"></span>
+        <span class="team-label">Blue</span>
+        <span class="team-members" id="blue-members"></span>
+      </div>
+      <div id="team-red" class="team-panel">
+        <span class="team-members" id="red-members"></span>
+        <span class="team-label">Red</span>
+        <span class="team-dot red-dot"></span>
+      </div>
+    </div>
     <div id="p5-canvas-container"></div>
     <div class="debug-strip"></div>
     <script src="script.js"></script>
