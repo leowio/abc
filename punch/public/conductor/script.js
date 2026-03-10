@@ -8,10 +8,8 @@ if (
   socket = io();
 }
 
-let debugStrip = document.querySelector(".debug-strip");
 let blueMembers = document.querySelector("#blue-members");
 let redMembers = document.querySelector("#red-members");
-let playerCount = 0;
 
 let players = {};
 let balls = [];
@@ -47,9 +45,6 @@ socket.on("new-player", function (data) {
 
 socket.on("delete-player", function (data) {
   delete players[data.id];
-  let card = document.querySelector("#card-" + data.id);
-  if (card) card.remove();
-  playerCount--;
   updateTeamBar();
 });
 
@@ -82,19 +77,6 @@ socket.on("player-swing", function (data) {
 
   p.flashUntil = millis() + SWING_FLASH_DURATION;
   p.lastHit = data.hit;
-
-  let card = document.querySelector("#card-" + data.id);
-  if (card) {
-    card.querySelector(".val-force").innerText =
-      "force: " + data.force.toFixed(2);
-    card.querySelector(".val-hit").innerText = "hit: " + data.hit;
-    card.style.backgroundColor = data.hit
-      ? "rgb(80, 120, 50)"
-      : "rgb(50, 50, 50)";
-    setTimeout(function () {
-      card.style.backgroundColor = "rgb(50, 50, 50)";
-    }, SWING_FLASH_DURATION);
-  }
 });
 
 function updateTeamBar() {
@@ -122,31 +104,10 @@ function addPlayer(socketID, px, py, emoji, team, health, alive) {
     lastHit: false,
     explosionUntil: 0,
   };
-
-  let card = document.createElement("div");
-  card.className = "player-card";
-  card.id = "card-" + socketID;
-
-  let label = document.createElement("div");
-  label.className = "player-label";
-  label.innerText = (emoji || "🏓") + " " + socketID.substring(0, 6);
-
-  let valForce = document.createElement("p");
-  valForce.className = "val-force";
-  valForce.innerText = "force: -";
-
-  let valHit = document.createElement("p");
-  valHit.className = "val-hit";
-  valHit.innerText = "hit: -";
-
-  card.append(label, valForce, valHit);
-  debugStrip.append(card);
-
-  playerCount++;
 }
 
 function setup() {
-  let canvas = createCanvas(windowWidth, windowHeight - 170);
+  let canvas = createCanvas(windowWidth, windowHeight - 50);
   canvas.parent("p5-canvas-container");
   textFont("monospace");
 }
@@ -255,5 +216,5 @@ function drawPlayers() {
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth, windowHeight - 170);
+  resizeCanvas(windowWidth, windowHeight - 50);
 }
