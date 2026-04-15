@@ -132,7 +132,7 @@ function fieldW() {
 }
 
 function fieldH() {
-  return fieldW() * 9 / 16;
+  return (fieldW() * 9) / 16;
 }
 
 function fieldX(nx) {
@@ -219,7 +219,6 @@ function drawPlayers() {
     textAlign(CENTER, CENTER);
     textSize(50);
     text(p.emoji, px, py);
-
   }
 }
 

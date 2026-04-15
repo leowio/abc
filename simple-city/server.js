@@ -106,12 +106,9 @@ io.on("connection", (socket) => {
       let dy = b.y - cur.y;
 
       let valid = false;
-      if (dir === "right" && dx > 5 && Math.abs(dy) <= Math.abs(dx))
-        valid = true;
-      if (dir === "left" && dx < -5 && Math.abs(dy) <= Math.abs(dx))
-        valid = true;
-      if (dir === "down" && dy > 5 && Math.abs(dx) <= Math.abs(dy))
-        valid = true;
+      if (dir === "right" && dx > 5 && Math.abs(dy) <= Math.abs(dx)) valid = true;
+      if (dir === "left" && dx < -5 && Math.abs(dy) <= Math.abs(dx)) valid = true;
+      if (dir === "down" && dy > 5 && Math.abs(dx) <= Math.abs(dy)) valid = true;
       if (dir === "up" && dy < -5 && Math.abs(dx) <= Math.abs(dy)) valid = true;
 
       if (valid) {
@@ -140,9 +137,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
-    const leavingName = players[socket.id]
-      ? players[socket.id].name
-      : socket.id.substring(0, 5);
+    const leavingName = players[socket.id] ? players[socket.id].name : socket.id.substring(0, 5);
     delete players[socket.id];
     io.emit("playerLeft", { id: socket.id });
     io.emit("chatMessage", {

@@ -21,7 +21,9 @@ let players = [];
 let conductor;
 
 function getTeamCount(team) {
-  return players.filter(function (p) { return p.team === team; }).length;
+  return players.filter(function (p) {
+    return p.team === team;
+  }).length;
 }
 
 function assignTeam() {
@@ -57,8 +59,26 @@ function findSpawnPosition(team) {
 }
 
 let ANIMAL_EMOJIS = [
-  "🐶", "🐱", "🐻", "🐼", "🐨", "🐯", "🦁", "🐮", "🐷", "🐸",
-  "🐵", "🐔", "🐧", "🦊", "🦝", "🦄", "🐴", "🐺", "🐰", "🐙"
+  "🐶",
+  "🐱",
+  "🐻",
+  "🐼",
+  "🐨",
+  "🐯",
+  "🦁",
+  "🐮",
+  "🐷",
+  "🐸",
+  "🐵",
+  "🐔",
+  "🐧",
+  "🦊",
+  "🦝",
+  "🦄",
+  "🐴",
+  "🐺",
+  "🐰",
+  "🐙",
 ];
 let takenEmojis = {};
 
@@ -285,17 +305,9 @@ io.on("connection", (socket) => {
         player.heldBallId = null;
         let speedMult = 1 + heldBall.hitCount * BALL_SPEED_INCREMENT;
         heldBall.vx =
-          Math.cos(launchAngle) *
-          swingForce *
-          BALL_BASE_SPEED *
-          HIT_FORCE_MULTIPLIER *
-          speedMult;
+          Math.cos(launchAngle) * swingForce * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER * speedMult;
         heldBall.vy =
-          Math.sin(launchAngle) *
-          swingForce *
-          BALL_BASE_SPEED *
-          HIT_FORCE_MULTIPLIER *
-          speedMult;
+          Math.sin(launchAngle) * swingForce * BALL_BASE_SPEED * HIT_FORCE_MULTIPLIER * speedMult;
         hitAny = true;
       } else {
         player.heldBallId = null;

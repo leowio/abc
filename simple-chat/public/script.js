@@ -37,6 +37,5 @@ function displayMessage(user, text) {
   threadWrapper.appendChild(li);
 
   // Auto-scroll to bottom
-  threadWrapper.parentElement.scrollTop =
-    threadWrapper.parentElement.scrollHeight;
+  threadWrapper.parentElement.scrollTop = threadWrapper.parentElement.scrollHeight;
 }

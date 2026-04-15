@@ -22,4 +22,3 @@ The server will start at **https://localhost:3000**. Open it in multiple browser
 
 - Swipe to move between buildings
 - Type a message and hit Send
-

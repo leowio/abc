@@ -228,64 +228,19 @@ function drawAvatar(px, py, c, name, playerId) {
   noStroke();
 
   fill(cSide[0] * 0.8, cSide[1] * 0.8, cSide[2] * 0.8);
-  quad(
-    bBotBL.x,
-    bBotBL.y,
-    bBotBR.x,
-    bBotBR.y,
-    bTopBR.x,
-    bTopBR.y,
-    bTopBL.x,
-    bTopBL.y,
-  );
+  quad(bBotBL.x, bBotBL.y, bBotBR.x, bBotBR.y, bTopBR.x, bTopBR.y, bTopBL.x, bTopBL.y);
 
   fill(cSide[0], cSide[1], cSide[2]);
-  quad(
-    bBotTL.x,
-    bBotTL.y,
-    bBotBL.x,
-    bBotBL.y,
-    bTopBL.x,
-    bTopBL.y,
-    bTopTL.x,
-    bTopTL.y,
-  );
+  quad(bBotTL.x, bBotTL.y, bBotBL.x, bBotBL.y, bTopBL.x, bTopBL.y, bTopTL.x, bTopTL.y);
 
   fill(cFront[0] * 0.85, cFront[1] * 0.85, cFront[2] * 0.85);
-  quad(
-    bBotTR.x,
-    bBotTR.y,
-    bBotBR.x,
-    bBotBR.y,
-    bTopBR.x,
-    bTopBR.y,
-    bTopTR.x,
-    bTopTR.y,
-  );
+  quad(bBotTR.x, bBotTR.y, bBotBR.x, bBotBR.y, bTopBR.x, bTopBR.y, bTopTR.x, bTopTR.y);
 
   fill(cFront[0], cFront[1], cFront[2]);
-  quad(
-    bBotTL.x,
-    bBotTL.y,
-    bBotTR.x,
-    bBotTR.y,
-    bTopTR.x,
-    bTopTR.y,
-    bTopTL.x,
-    bTopTL.y,
-  );
+  quad(bBotTL.x, bBotTL.y, bBotTR.x, bBotTR.y, bTopTR.x, bTopTR.y, bTopTL.x, bTopTL.y);
 
   fill(cTop[0], cTop[1], cTop[2]);
-  quad(
-    bTopTL.x,
-    bTopTL.y,
-    bTopTR.x,
-    bTopTR.y,
-    bTopBR.x,
-    bTopBR.y,
-    bTopBL.x,
-    bTopBL.y,
-  );
+  quad(bTopTL.x, bTopTL.y, bTopTR.x, bTopTR.y, bTopBR.x, bTopBR.y, bTopBL.x, bTopBL.y);
 
   let headCx = (bTopTL.x + bTopTR.x + bTopBL.x + bTopBR.x) / 4;
   let headCy = (bTopTL.y + bTopTR.y + bTopBL.y + bTopBR.y) / 4;

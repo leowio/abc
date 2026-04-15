@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require("express");
 
 const https = require("https");
 // to read certificates from the filesystem (fs)
@@ -9,108 +9,96 @@ const portHTTPS = 4200; // port for https
 
 // returning to the client anything that is
 // inside the public folder
-app.use(express.static('public'));
-
+app.use(express.static("public"));
 
 // Creating object of key and certificate
 // for SSL
 const options = {
-    key: fs.readFileSync("keys-for-local-https/localhost-key.pem"),
-    cert: fs.readFileSync("keys-for-local-https/localhost.pem"),
+  key: fs.readFileSync("keys-for-local-https/localhost-key.pem"),
+  cert: fs.readFileSync("keys-for-local-https/localhost.pem"),
 };
 
-let HTTPSserver = https.createServer(options, app)
+let HTTPSserver = https.createServer(options, app);
 
-
-const { Server } = require('socket.io'); // include library
-const io = new Server(HTTPSserver); // start socket io 
+const { Server } = require("socket.io"); // include library
+const io = new Server(HTTPSserver); // start socket io
 
 // socket.id -> { userId, username }
-let sockets = {};      
+let sockets = {};
 
+let messages = [];
 
-let messages = []
+io.on("connection", (socket) => {
+  // we manage the connection inside here
+  console.log("a user connected", socket.id);
 
-io.on('connection', (socket) => {
+  socket.on("identify", function (data) {
+    const userInfo = {
+      userId: data?.userId || socket.id,
+      username: data?.username || "",
+    };
 
-    // we manage the connection inside here
-    console.log('a user connected', socket.id);
+    // connect username and user id to socket ids
+    sockets[socket.id] = userInfo;
+    console.log("identified client", {
+      socketId: socket.id,
+      userId: userInfo.userId,
+      username: userInfo.username || "Anonymous",
+    });
 
-    socket.on("identify", function(data){
-        const userInfo = {
-            userId: data?.userId || socket.id,
-            username: data?.username || ""
-        };
+    // could update other about who's online
+    socket.emit("chat-history", messages);
+  });
 
-        // connect username and user id to socket ids
-        sockets[socket.id] = userInfo;
-        console.log("identified client", {
-            socketId: socket.id,
-            userId: userInfo.userId,
-            username: userInfo.username || "Anonymous"
-        });
+  socket.on("name-change", function (data) {
+    // handle change of username
+    if (!sockets[socket.id]) {
+      sockets[socket.id] = {
+        userId: data?.userId || socket.id,
+        username: "",
+      };
+    }
 
-        // could update other about who's online
-        socket.emit("chat-history", messages)
-    })
+    sockets[socket.id].username = data?.username || "";
+  });
 
-    socket.on("name-change", function(data){
-        // handle change of username
-        if (!sockets[socket.id]) {
-            sockets[socket.id] = {
-                userId: data?.userId || socket.id,
-                username: ""
-            };
-        }
+  socket.on("message-from-client", function (data) {
+    console.log("got a msg from client", data);
 
-        sockets[socket.id].username = data?.username || "";
-    })
+    const trimmedMessage = data?.message?.trim();
 
-    socket.on("message-from-client", function(data){
-        console.log("got a msg from client", data);
+    if (!trimmedMessage) {
+      return;
+    }
 
-        const trimmedMessage = data?.message?.trim();
+    const sender = sockets[socket.id] || {
+      userId: socket.id,
+      username: "",
+    };
 
-        if (!trimmedMessage) {
-            return;
-        }
+    // message object should contain message, username and userID
+    let message = {
+      message: trimmedMessage,
+      userId: sender.userId,
+      username: sender.username || "Anonymous",
+    };
 
-        const sender = sockets[socket.id] || {
-            userId: socket.id,
-            username: ""
-        };
+    messages.push(message);
+    io.emit("message-from-server", message);
+  });
 
-        // message object should contain message, username and userID
-        let message = {
-            message: trimmedMessage,
-            userId: sender.userId,
-            username: sender.username || "Anonymous"
-        };
+  socket.on("disconnect", function () {
+    console.log("someone disconnected", socket.id);
 
-        messages.push(message)
-        io.emit("message-from-server", message);
-    })
+    // delete user from our records
+    delete sockets[socket.id];
 
-    socket.on("disconnect", function(){
-        console.log("someone disconnected", socket.id)
-
-        // delete user from our records
-        delete sockets[socket.id];
-        
-        console.log("online socket", sockets)
-        
-    })
-
-})
-
-
-
+    console.log("online socket", sockets);
+  });
+});
 
 // Creating servers and make them listen at their ports:
 
 HTTPSserver.listen(portHTTPS, function (req, res) {
-    console.log("HTTPS Server started at port", portHTTPS);
+  console.log("HTTPS Server started at port", portHTTPS);
 });
-
-
-

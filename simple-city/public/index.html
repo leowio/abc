@@ -17,12 +17,7 @@
     <div id="p5-canvas-container"></div>
 
     <form id="chatForm">
-      <input
-        id="newMessage"
-        type="text"
-        placeholder="Say something..."
-        autocomplete="off"
-      />
+      <input id="newMessage" type="text" placeholder="Say something..." autocomplete="off" />
       <button type="submit">Send</button>
     </form>
 
@@ -34,11 +29,7 @@
           DeviceOrientationEvent.requestPermission()
             .then(function (permissionState) {
               if (permissionState === "granted") {
-                window.addEventListener(
-                  "deviceorientation",
-                  handleOrientation,
-                  true,
-                );
+                window.addEventListener("deviceorientation", handleOrientation, true);
               }
             })
             .catch(console.error);
